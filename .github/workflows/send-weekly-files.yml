@@ -44,12 +44,8 @@ jobs:
           server_port: ${{ secrets.SMTP_PORT }}
           username: ${{ secrets.SMTP_USER }}
           password: ${{ secrets.SMTP_PWD }}
-          subject: 本周仓库增量epub文件更新
-          body: |
-            以下是本周（近7天）新增/修改的epub文件列表：
-            $(cat epub-files.txt)
-            
-            附件为对应的epub文件，请查收~
+          subject: 
+          body: 
           to: ${{ secrets.RECEIVER_EMAIL }}
           from: GitHub每周epub更新
           attachments: ${{ env.EPUB_ATTACHMENTS }}  # 直接传入所有epub文件路径
