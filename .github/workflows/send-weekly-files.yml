@@ -1,25 +1,68 @@
-name: 每周发送仓库文件
+name: 每周发送增量epub文件
 on:
   schedule:
-    - cron: '1 6 * * 6'  # 每周一UTC时间9点发邮件
-  workflow_dispatch:  # 可手动触发测试
+    - cron: '0 9 * * 1'  # 每周一UTC时间9点发（比同步晚1小时）
+  workflow_dispatch:  # 允许手动触发测试
 jobs:
-  send-email:
+  send-epub-email:
     runs-on: ubuntu-latest
     steps:
-      - name: 拉取仓库最新代码
+      - name: 拉取仓库最新代码（含同步后的增量）
         uses: actions/checkout@v4
-      - name: 打包所有文件
-        run: zip -r weekly-files.zip . -x ".git/*"  # 打包并排除无用的.git目录
-      - name: 发送邮件
+        with:
+          fetch-depth: 0  # 拉取完整Git提交记录，确保能筛选增量
+        
+      - name: 筛选近7天新增/修改的.epub文件
+        id: get_epub_changes
+        run: |
+          # 1. 抓取近7天变更的文件，仅保留.epub格式，排除无用目录
+          CHANGED_EPUB=$(git log --since="7 days ago" --name-only --pretty=format:'' -- . ':!/.github' ':!/.git' | grep -E '\.epub$' | sort | uniq)
+          
+          # 2. 保存到文件列表，方便后续使用
+          echo "$CHANGED_EPUB" > epub-files.txt
+          
+          # 3. 输出文件列表（Action日志可见，方便排查）
+          echo "近7天新增/修改的epub文件："
+          cat epub-files.txt
+          
+          # 4. 转换为逗号分隔的字符串（适配邮件附件格式）
+          EPUB_ATTACHMENTS=$(echo "$CHANGED_EPUB" | tr '\n' ',' | sed 's/,$//')
+          echo "EPUB_ATTACHMENTS=$EPUB_ATTACHMENTS" >> $GITHUB_ENV
+          
+          # 5. 标记是否有epub增量
+          if [ -s epub-files.txt ]; then
+            echo "HAS_EPUB=true" >> $GITHUB_ENV
+          else
+            echo "HAS_EPUB=false" >> $GITHUB_ENV
+          fi
+        
+      - name: 发送含epub文件的邮件（有增量才发）
+        if: env.HAS_EPUB == 'true'
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: ${{ secrets.SMTP_SERVER }}
           server_port: ${{ secrets.SMTP_PORT }}
           username: ${{ secrets.SMTP_USER }}
           password: ${{ secrets.SMTP_PWD }}
-          subject: 本周仓库更新文件
-          body: 附件是仓库本周更新的文件，请查收
+          subject: 本周仓库增量epub文件更新
+          body: |
+            以下是本周（近7天）新增/修改的epub文件列表：
+            $(cat epub-files.txt)
+            
+            附件为对应的epub文件，请查收~
           to: ${{ secrets.RECEIVER_EMAIL }}
-          from: GitHub每周更新
-          attachments: weekly-files.zip
+          from: GitHub每周epub更新
+          attachments: ${{ env.EPUB_ATTACHMENTS }}  # 直接传入所有epub文件路径
+        
+      - name: 无epub增量时发送提示邮件（可选）
+        if: env.HAS_EPUB == 'false'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PWD }}
+          subject: 本周无epub文件更新
+          body: 本周原仓库未更新epub格式文件，暂无相关增量内容可发送~
+          to: ${{ secrets.RECEIVER_EMAIL }}
+          from: GitHub每周epub更新
