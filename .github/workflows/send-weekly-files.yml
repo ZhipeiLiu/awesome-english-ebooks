@@ -1,0 +1,25 @@
+name: 每周发送仓库文件
+on:
+  schedule:
+    - cron: '1 6 * * 6'  # 每周一UTC时间9点发邮件
+  workflow_dispatch:  # 可手动触发测试
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取仓库最新代码
+        uses: actions/checkout@v4
+      - name: 打包所有文件
+        run: zip -r weekly-files.zip . -x ".git/*"  # 打包并排除无用的.git目录
+      - name: 发送邮件
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PWD }}
+          subject: 本周仓库更新文件
+          body: 附件是仓库本周更新的文件，请查收
+          to: ${{ secrets.RECEIVER_EMAIL }}
+          from: GitHub每周更新
+          attachments: weekly-files.zip
