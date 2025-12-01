@@ -14,5 +14,5 @@ jobs:
         with:
           target_repo_token: ${{ secrets.GITHUB_TOKEN }}
           upstream_sync_repo: hehonghui/awesome-english-ebooks  # 需修改，例：octocat/Spoon-Knife
-          upstream_sync_branch: main  # 需修改，填原仓库分支
-          target_sync_branch: main  # 需修改，填你Fork仓库的对应分支
+          upstream_sync_branch: master  # 需修改，填原仓库分支
+          target_sync_branch: master  # 需修改，填你Fork仓库的对应分支
