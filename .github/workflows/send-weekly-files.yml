@@ -44,8 +44,8 @@ jobs:
           server_port: ${{ secrets.SMTP_PORT }}
           username: ${{ secrets.SMTP_USER }}
           password: ${{ secrets.SMTP_PWD }}
-          subject: 
-          body: 
+          subject: Magazine
+          body: Here
           to: ${{ secrets.RECEIVER_EMAIL }}
           from: GitHub每周epub更新
           attachments: ${{ env.EPUB_ATTACHMENTS }}  # 直接传入所有epub文件路径
